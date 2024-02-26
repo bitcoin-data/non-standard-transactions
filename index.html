@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Non-Standard Bitcoin Transactions Dataset</title>
+  <meta name="author" content="0xB10C">
+  <meta name="description" content="The overview page for the non-standard bitcoin transaction dataset.">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.0.0/datatables.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <nav class="navbar bg-body-tertiary">
+    <div class="container">
+      <h1 class="navbar-brand mb-0">
+        <img src="https://avatars.githubusercontent.com/u/113713822?s=200" alt="Logo" width="24" height="24" class="d-inline-block align-text-top">
+        Non-Standard Bitcoin Transaction Dataset
+      </h1>
+      <a class="nav-link" href="https://github.com/bitcoin-data/non-standard-transactions">Dataset</a>
+    </div>
+  </nav>
+  <div class="container">
+      <h1>Non-Standard Bitcoin Transaction Dataset</h1>
+      <p>
+        This is the overview page for the <a href="https://github.com/bitcoin-data">bitcoin-data</a> <a href="https://github.com/bitcoin-data/non-standard-transactions">non-standard Bitcoin transaction</a> dataset.
+        The dataset is generated with the <a href="https://github.com/0xB10C/find-non-standard-tx">non-standard tx finder</a> tool.
+        As of writing (February 2024), the tool uses a Bitcoin Core v25 test-node with the extra command line parameters "-limitancestorcount=26 -limitdescendantcount=26 -maxtxfee=0" to work around some methodology limitations.  
+        Note that the dataset starts in late 2021. It's updated sporadically.
+      </p> 
+      <section class="my-4">
+        <h3>Recent Non-Standard Transactions</h3>
+        <table id="non-standard" class="display" style="width:100%"></table>
+      </section>
+      <section class="my-5">
+        <h3>Non-Standard transactions by reason (per 1k blocks)</h3>
+        <p>
+            The following chart shows the count of non-standard transactions by type per 1000 blocks.
+        </p>
+        <canvas id="reasonChart"></canvas>
+      </section>
+      <section class="my-5">
+        <h3>Non-Standard transactions by miner (per 1k blocks)</h3>
+        <p>
+            The following chart shows the count of non-standard transactions by miner per 1000 blocks.
+        </p>
+        <canvas id="minerChart"></canvas>
+      </section>
+      <section class="my-5">
+        <h3>Non-Standard Reasons</h3>
+        <p>
+          <ul>
+            <li><b>dust</b>: transaction with an output value smaller than the dust limit.</li>
+            <li><b>tx-size</b>: transaction larger than 100kvB in size</li>
+            <li><b>scriptpubkey</b>: transaction with a non-standard output</li>
+            <li><b>multi-op-return</b>: transaction with multiple OP_RETURN outputs</li>
+            <li><b>bad-txns-nonstandard-inputs</b>: transactions with non-standard inputs</li>
+            <li><b>too-long-mempool-chain</b>: a transaction package with more than 26 (normally 25) transactions</li>
+          </ul>
+        </p>
+        <canvas id="minerChart"></canvas>
+      </section>
+  </div>
+
+</body>
+ 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.0.0/datatables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    window.onload = (event) => {
+        console.log("page is fully loaded");
+        fetch(new Request("https://raw.githubusercontent.com/bitcoin-data/non-standard-transactions/main/non-standard.csv"))
+          .then((response) => response.text())
+          .then((text) => {
+            let rows = text.split("\n")
+            
+            let table = []
+            let per1000Blocks = {};
+            let reasons = new Set();
+            let miners = new Set();
+            for(row of rows) {
+                let cols = row.split(",");
+                if (cols.length > 1) {
+                    let height = cols[0]
+                    let miner = cols[1]
+                    let reason = cols[2]
+                    
+                    let a = document.createElement('a');
+                    a.innerHTML = cols[3].substring(0, 16) + "&mldr;";
+                    a.href = "https://mempool.space/tx/" + cols[3];
+                    a.style = "font-family: monospace;"
+                    a.target = "_blank";
+                    let txid  = a;
+
+                    let vsize = cols[4]
+                    let inputs = cols[5]
+                    let outputs = cols[6]
+
+                    table.push([height, miner, reason, txid, vsize, inputs, outputs])
+                    reasons.add(reason)
+                    miners.add(miner)
+
+                    // line charts
+                    let height1000 = parseInt(height/1000) * 1000;
+                    if(per1000Blocks[height1000] === undefined) {
+                        per1000Blocks[height1000] = { reason: {}, miner: {}};
+                    }
+                    if(per1000Blocks[height1000]["reason"][reason] === undefined) {
+                        per1000Blocks[height1000]["reason"][reason] = 0;
+                    }
+                    if(per1000Blocks[height1000]["miner"][miner] === undefined) {
+                        per1000Blocks[height1000]["miner"][miner] = 0;
+                    }
+                    per1000Blocks[height1000]["reason"][reason] += 1;
+                    per1000Blocks[height1000]["miner"][miner] += 1;
+                } 
+            }
+            
+            let reasonDatasets = [];
+            for(const reason of reasons) {
+                let dataset = {
+                    label: reason,
+                    data: []
+                };
+                for(const height of Object.keys(per1000Blocks)) {
+                    if(per1000Blocks[height]["reason"][reason] === undefined) {
+                        dataset.data.push(0)
+                    } else {
+                        dataset.data.push(per1000Blocks[height]["reason"][reason])
+                    }
+                }
+                reasonDatasets.push(dataset);
+            }
+            let minerDatasets = [];
+            for(const miner of miners) {
+                let dataset = {
+                    label: miner,
+                    data: []
+                };
+                for(const height of Object.keys(per1000Blocks)) {
+                    if(per1000Blocks[height]["miner"][miner] === undefined) {
+                        dataset.data.push(0)
+                    } else {
+                        dataset.data.push(per1000Blocks[height]["miner"][miner])
+                    }
+                }
+                minerDatasets.push(dataset);
+            }
+            new Chart(document.getElementById('reasonChart'), {
+                type: 'scatter',
+                data: {
+                  labels: Object.keys(per1000Blocks),
+                  datasets: reasonDatasets,
+                },
+                options: {
+                  scales: {
+                    y: {
+                      min: 0.5,
+                      type: "logarithmic",
+                    }
+                  }
+                }
+            });
+            new Chart(document.getElementById('minerChart'), {
+                type: 'scatter',
+                data: {
+                  labels: Object.keys(per1000Blocks),
+                  datasets: minerDatasets,
+                },
+                options: {
+                  scales: {
+                    y: {
+                      min: 0.5,
+                      type: "logarithmic",
+                    }
+                  }
+                }
+            });
+
+            new DataTable('#non-standard',
+                {
+                columns: [
+                    { title: "height" },
+                    { title: "miner" },
+                    { title: "reason" },
+                    { title: "txid" },
+                    { title: "vsize" },
+                    { title: "inputs" },
+                    { title: "outputs" },
+                ],
+                data: table,
+                order: [[0, 'desc']],
+                paging: true,
+                scrollCollapse: true,
+                scrollY: '50vh',
+                lengthMenu: [
+                    [500, 1000, 2500],
+                    [500, 1000, 2500]
+                ],
+                columnDefs: [{ className: 'dt-body-left', targets: 0 }],
+                autoWidth: false,
+            },
+            );
+
+          });
+
+    };
+
+</script>
+
+</html>
