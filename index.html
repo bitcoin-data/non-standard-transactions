@@ -71,7 +71,7 @@
 <script>
     window.onload = (event) => {
         console.log("page is fully loaded");
-        fetch(new Request("https://raw.githubusercontent.com/bitcoin-data/non-standard-transactions/main/non-standard.csv"))
+        fetch(new Request("non-standard.csv"))
           .then((response) => response.text())
           .then((text) => {
             let rows = text.split("\n")
