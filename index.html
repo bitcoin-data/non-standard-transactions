@@ -29,6 +29,19 @@
         As of writing (February 2024), the tool uses a Bitcoin Core v25 test-node with the extra command line parameters "-limitancestorcount=26 -limitdescendantcount=26 -maxtxfee=0" to work around some methodology limitations.  
         Note that the dataset starts in late 2021. It's updated sporadically.
       </p> 
+      <section class="my-5">
+        <h3>Non-Standard Reasons</h3>
+        <p>
+          <ul>
+            <li><b>dust</b>: transaction with an output value smaller than the dust limit.</li>
+            <li><b>tx-size</b>: transaction larger than 100kvB in size</li>
+            <li><b>scriptpubkey</b>: transaction with a non-standard output</li>
+            <li><b>multi-op-return</b>: transaction with multiple OP_RETURN outputs</li>
+            <li><b>bad-txns-nonstandard-inputs</b>: transactions with non-standard inputs</li>
+            <li><b>too-long-mempool-chain</b>: a transaction package with more than 26 (normally 25) transactions</li>
+          </ul>
+        </p>
+      </section>
       <section class="my-4">
         <h3>Recent Non-Standard Transactions</h3>
         <table id="non-standard" class="display" style="width:100%"></table>
@@ -44,20 +57,6 @@
         <h3>Non-Standard transactions by miner (per 1k blocks)</h3>
         <p>
             The following chart shows the count of non-standard transactions by miner per 1000 blocks.
-        </p>
-        <canvas id="minerChart"></canvas>
-      </section>
-      <section class="my-5">
-        <h3>Non-Standard Reasons</h3>
-        <p>
-          <ul>
-            <li><b>dust</b>: transaction with an output value smaller than the dust limit.</li>
-            <li><b>tx-size</b>: transaction larger than 100kvB in size</li>
-            <li><b>scriptpubkey</b>: transaction with a non-standard output</li>
-            <li><b>multi-op-return</b>: transaction with multiple OP_RETURN outputs</li>
-            <li><b>bad-txns-nonstandard-inputs</b>: transactions with non-standard inputs</li>
-            <li><b>too-long-mempool-chain</b>: a transaction package with more than 26 (normally 25) transactions</li>
-          </ul>
         </p>
         <canvas id="minerChart"></canvas>
       </section>
