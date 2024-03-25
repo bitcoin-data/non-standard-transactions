@@ -60,6 +60,13 @@
         </p>
         <canvas id="minerChart"></canvas>
       </section>
+      <section class="my-5">
+        <h3>Fees paid for non-standard transactions to miner (per 1k blocks)</h3>
+        <p>
+            The following chart shows the fees paid by non-standard transactions to a miner per 1000 blocks.
+        </p>
+        <canvas id="feeChart"></canvas>
+      </section>
   </div>
 
 </body>
@@ -67,9 +74,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.0.0/datatables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-autocolors"></script>
 <script>
     window.onload = (event) => {
         console.log("page is fully loaded");
+        const autocolors = window['chartjs-plugin-autocolors'];
+        Chart.register(autocolors);
         fetch(new Request("non-standard.csv"))
           .then((response) => response.text())
           .then((text) => {
@@ -96,15 +106,16 @@
                     let vsize = cols[4]
                     let inputs = cols[5]
                     let outputs = cols[6]
+                    let fee = cols[7]
 
-                    table.push([height, miner, reason, txid, vsize, inputs, outputs])
+                    table.push([height, miner, reason, txid, vsize, inputs, outputs, fee])
                     reasons.add(reason)
                     miners.add(miner)
 
                     // line charts
                     let height1000 = parseInt(height/1000) * 1000;
                     if(per1000Blocks[height1000] === undefined) {
-                        per1000Blocks[height1000] = { reason: {}, miner: {}};
+                        per1000Blocks[height1000] = { reason: {}, miner: {}, fee: {}};
                     }
                     if(per1000Blocks[height1000]["reason"][reason] === undefined) {
                         per1000Blocks[height1000]["reason"][reason] = 0;
@@ -112,8 +123,12 @@
                     if(per1000Blocks[height1000]["miner"][miner] === undefined) {
                         per1000Blocks[height1000]["miner"][miner] = 0;
                     }
+                    if(per1000Blocks[height1000]["fee"][miner] === undefined) {
+                        per1000Blocks[height1000]["fee"][miner] = 0;
+                    }
                     per1000Blocks[height1000]["reason"][reason] += 1;
                     per1000Blocks[height1000]["miner"][miner] += 1;
+                    per1000Blocks[height1000]["fee"][miner] += parseInt(fee);
                 } 
             }
             
@@ -147,6 +162,22 @@
                 }
                 minerDatasets.push(dataset);
             }
+            let feeDatasets = [];
+            for(const miner of miners) {
+                let dataset = {
+                    label: miner,
+                    data: [],
+                };
+                for(const height of Object.keys(per1000Blocks)) {
+                    if(per1000Blocks[height]["fee"][miner] === undefined) {
+                        dataset.data.push(0)
+                    } else {
+                        dataset.data.push(per1000Blocks[height]["fee"][miner])
+                    }
+                }
+                feeDatasets.push(dataset);
+            }
+
             new Chart(document.getElementById('reasonChart'), {
                 type: 'scatter',
                 data: {
@@ -177,6 +208,24 @@
                   }
                 }
             });
+            new Chart(document.getElementById('feeChart'), {
+                type: 'scatter',
+                data: {
+                  labels: Object.keys(per1000Blocks),
+                  datasets: feeDatasets,
+                },
+                options: {
+                  scales: {
+                    y: {
+                      min: 0.9,
+                      type: "logarithmic",
+                      ticks: {
+                        callback: (v) => v < 10000? v + " sat" : v/100_000_000  + " BTC",
+                      }
+                    }
+                  }
+                }
+            });
 
             new DataTable('#non-standard',
                 {
@@ -185,9 +234,10 @@
                     { title: "miner" },
                     { title: "reason" },
                     { title: "txid" },
-                    { title: "vsize" },
+                    { title: "vsize (vByte)" },
                     { title: "inputs" },
                     { title: "outputs" },
+                    { title: "fee (sat)" },
                 ],
                 data: table,
                 order: [[0, 'desc']],
