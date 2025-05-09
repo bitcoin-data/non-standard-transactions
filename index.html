@@ -26,9 +26,10 @@
       <p>
         This is the overview page for the <a href="https://github.com/bitcoin-data">bitcoin-data</a> <a href="https://github.com/bitcoin-data/non-standard-transactions">non-standard Bitcoin transaction</a> dataset.
         The dataset is generated with the <a href="https://github.com/0xB10C/find-non-standard-tx">non-standard tx finder</a> tool.
-        As of writing (February 2024), the tool uses a Bitcoin Core v25 test-node with the extra command line parameters "-limitancestorcount=26 -limitdescendantcount=26 -maxtxfee=0" to work around some methodology limitations.  
+        Up to block 839493 the tool uses a Bitcoin Core v25 test-node with the extra command line parameters "-limitancestorcount=26 -limitdescendantcount=26 -maxtxfee=0" to work around some methodology limitations.
+        The blocks after 839493 were processed with a Bitcoin Core v28 test-node.
         Note that the dataset starts in late 2021. It's updated sporadically.
-      </p> 
+      </p>
       <section class="my-5">
         <h3>Non-Standard Reasons</h3>
         <p>
@@ -70,7 +71,7 @@
   </div>
 
 </body>
- 
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.datatables.net/v/bs5/jq-3.7.0/dt-2.0.0/datatables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -84,7 +85,7 @@
           .then((response) => response.text())
           .then((text) => {
             let rows = text.split("\n")
-            
+
             let table = []
             let per1000Blocks = {};
             let reasons = new Set();
@@ -95,7 +96,7 @@
                     let height = cols[0]
                     let miner = cols[1]
                     let reason = cols[2]
-                    
+
                     let a = document.createElement('a');
                     a.innerHTML = cols[3].substring(0, 16) + "&mldr;";
                     a.href = "https://mempool.space/tx/" + cols[3];
@@ -129,9 +130,9 @@
                     per1000Blocks[height1000]["reason"][reason] += 1;
                     per1000Blocks[height1000]["miner"][miner] += 1;
                     per1000Blocks[height1000]["fee"][miner] += parseInt(fee);
-                } 
+                }
             }
-            
+
             let reasonDatasets = [];
             for(const reason of reasons) {
                 let dataset = {
